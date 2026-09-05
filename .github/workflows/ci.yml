@@ -23,10 +23,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install GDAL system libraries
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libgdal-dev gdal-bin
+      # GDAL / PROJ / GEOS ship inside the rasterio / pyogrio / pyproj / shapely
+      # wheels, so no system GDAL install is needed.
 
       - uses: actions/setup-python@v5
         with:

@@ -207,13 +207,13 @@ def train(cfg: Config, feature_manifest: dict[str, Any], *, fold: int = 0) -> Tr
             va = _run_epoch(model, val_loader, criterion, device, desc=f"val e{epoch}")
             scheduler.step()
 
-            row = {
-                "epoch": epoch,
-                "train_loss": tr["loss"],
-                "val_loss": va["loss"],
-                "val_iou": va["iou"],
-                "val_pr_auc": va["pr_auc"],
-                "lr": scheduler.get_last_lr()[0],
+            row: dict[str, float] = {
+                "epoch": float(epoch),
+                "train_loss": float(tr["loss"]),
+                "val_loss": float(va["loss"]),
+                "val_iou": float(va["iou"]),
+                "val_pr_auc": float(va["pr_auc"]),
+                "lr": float(scheduler.get_last_lr()[0]),
                 "epoch_seconds": time.time() - t0,
             }
             history.append(row)

@@ -97,3 +97,24 @@ pytest tests/                         32 passed, coverage 91%
   run should validate the OData `$filter` and FIRMS CSV schema.
 - Real-data end-to-end (`data.source: cdse`) is deferred until credentials are
   provided.
+
+---
+
+## 2026-09-06 — CI fixes (post first push)
+
+First GitHub Actions run surfaced two failures, both fixed:
+
+1. **mypy** `src/models/train.py`: the per-epoch `row` dict was inferred as
+   `dict[str, float | Tensor]` on a clean (non-incremental) check because
+   `scheduler.get_last_lr()[0]` is loosely typed. Fixed by declaring
+   `row: dict[str, float]` and wrapping each value in `float(...)`. Local runs had
+   passed only due to a stale `.mypy_cache`.
+2. **Docker build** failed on `apt-get install gdal-bin libgdal32` — the runtime
+   GDAL package name differs across the Debian release behind `python:3.13-slim`.
+   Fixed by **removing all system GDAL** from both Dockerfiles: GDAL/PROJ/GEOS are
+   bundled inside the `rasterio` / `pyogrio` / `pyproj` / `shapely` manylinux
+   wheels, so no apt package is needed. Also added `PYTHONPATH=/app` to the images
+   (Streamlit puts the script dir, not the workdir, on `sys.path`), pinned
+   `torch==2.6.0+cpu` / `torchvision==0.21.0+cpu` in `requirements-cpu.txt` so the
+   CUDA wheel is never pulled on Linux, and dropped the now-unnecessary
+   `apt-get install libgdal-dev` step from the CI test job.

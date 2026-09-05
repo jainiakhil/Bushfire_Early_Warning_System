@@ -1,7 +1,8 @@
 # =============================================================================
 #  CPU-only dependency set - used by CI and by Docker images built without a GPU.
 #
-#  Installs the CPU PyTorch wheels explicitly so no CUDA runtime is pulled in,
+#  Pins the explicit `+cpu` PyTorch build so no CUDA runtime is pulled in
+#  (important on Linux, where the default PyPI `torch` wheel bundles CUDA),
 #  then defers everything else to requirements.txt.
 #
 #  Usage:
@@ -9,7 +10,7 @@
 # =============================================================================
 
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch>=2.2.0
-torchvision>=0.17.0
+torch==2.6.0+cpu
+torchvision==0.21.0+cpu
 
 -r requirements.txt

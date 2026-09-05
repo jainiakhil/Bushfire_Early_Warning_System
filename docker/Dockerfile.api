@@ -2,9 +2,11 @@
 # =============================================================================
 #  FastAPI inference service - multi-stage build
 #
-#  Stage 1 (builder): compile/install all Python deps (incl. GDAL-linked wheels)
-#                     into a self-contained virtualenv.
+#  Stage 1 (builder): install all Python deps into a self-contained virtualenv.
 #  Stage 2 (runtime): copy only the venv + application code onto a slim base.
+#
+#  GDAL/PROJ/GEOS are bundled inside the rasterio / pyogrio / pyproj / shapely
+#  manylinux wheels, so no system GDAL package is required.
 #
 #  CPU-only PyTorch is used inside the image (requirements-cpu.txt). For a
 #  GPU-served deployment, base this on an `nvidia/cuda` image and install the
@@ -19,12 +21,8 @@ FROM python:${PYTHON_VERSION}-slim AS builder
 ENV PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# GDAL headers/libs are needed to build rasterio / pyproj / geopandas wheels
-# that link against the system GDAL.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        build-essential \
-        gdal-bin \
-        libgdal-dev \
+# build-essential covers the rare source-only dependency; everything else is a wheel.
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 RUN python -m venv /opt/venv
@@ -39,15 +37,11 @@ FROM python:${PYTHON_VERSION}-slim AS runtime
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/app \
     PATH="/opt/venv/bin:$PATH" \
     LOG_LEVEL=INFO
 
-# Runtime GDAL shared libraries only (no -dev headers).
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        gdal-bin \
-        libgdal32 \
-    && rm -rf /var/lib/apt/lists/* \
-    && useradd --create-home --uid 1000 appuser
+RUN useradd --create-home --uid 1000 appuser
 
 COPY --from=builder /opt/venv /opt/venv
 

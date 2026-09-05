@@ -3,8 +3,8 @@
 #  Streamlit + Folium dashboard
 #
 #  Shares the builder pattern with Dockerfile.api. The dashboard talks to the
-#  API over HTTP (API_URL env), so it needs the same geospatial stack for the
-#  local raster preview but not PyTorch-GPU.
+#  API over HTTP (API_URL env) and reads the uploaded raster locally for the
+#  preview/histograms. GDAL etc. are bundled in the wheels - no apt GDAL needed.
 # =============================================================================
 
 ARG PYTHON_VERSION=3.13
@@ -13,8 +13,7 @@ FROM python:${PYTHON_VERSION}-slim AS builder
 
 ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        build-essential gdal-bin libgdal-dev \
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 RUN python -m venv /opt/venv
@@ -28,14 +27,12 @@ FROM python:${PYTHON_VERSION}-slim AS runtime
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/app \
     PATH="/opt/venv/bin:$PATH" \
     API_URL=http://api:8000 \
     LOG_LEVEL=INFO
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        gdal-bin libgdal32 \
-    && rm -rf /var/lib/apt/lists/* \
-    && useradd --create-home --uid 1000 appuser
+RUN useradd --create-home --uid 1000 appuser
 
 COPY --from=builder /opt/venv /opt/venv
 
