@@ -1,0 +1,68 @@
+# syntax=docker/dockerfile:1
+# =============================================================================
+#  FastAPI inference service - multi-stage build
+#
+#  Stage 1 (builder): compile/install all Python deps (incl. GDAL-linked wheels)
+#                     into a self-contained virtualenv.
+#  Stage 2 (runtime): copy only the venv + application code onto a slim base.
+#
+#  CPU-only PyTorch is used inside the image (requirements-cpu.txt). For a
+#  GPU-served deployment, base this on an `nvidia/cuda` image and install the
+#  matching torch wheel instead.
+# =============================================================================
+
+ARG PYTHON_VERSION=3.13
+
+# ---------- Stage 1: builder ----------
+FROM python:${PYTHON_VERSION}-slim AS builder
+
+ENV PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# GDAL headers/libs are needed to build rasterio / pyproj / geopandas wheels
+# that link against the system GDAL.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        gdal-bin \
+        libgdal-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+WORKDIR /build
+COPY requirements.txt requirements-cpu.txt ./
+RUN pip install --upgrade pip && pip install -r requirements-cpu.txt
+
+# ---------- Stage 2: runtime ----------
+FROM python:${PYTHON_VERSION}-slim AS runtime
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/opt/venv/bin:$PATH" \
+    LOG_LEVEL=INFO
+
+# Runtime GDAL shared libraries only (no -dev headers).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        gdal-bin \
+        libgdal32 \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --create-home --uid 1000 appuser
+
+COPY --from=builder /opt/venv /opt/venv
+
+WORKDIR /app
+COPY src/ ./src/
+COPY app/ ./app/
+COPY configs/ ./configs/
+COPY pyproject.toml README.md ./
+# Model artefact is mounted at runtime via docker-compose (data/outputs).
+
+RUN mkdir -p data/raw data/processed data/outputs && chown -R appuser:appuser /app
+USER appuser
+
+EXPOSE 8000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)"
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

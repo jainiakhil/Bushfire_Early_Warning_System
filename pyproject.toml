@@ -1,0 +1,90 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sar-bushfire-pipeline"
+version = "0.1.0"
+description = "Sentinel-1 SAR bushfire active-fire-front detection pipeline (U-Net + FastAPI + Streamlit)"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "jainiakhil" }]
+keywords = ["sar", "sentinel-1", "bushfire", "wildfire", "remote-sensing", "segmentation", "pytorch"]
+classifiers = [
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Scientific/Engineering :: GIS",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.urls]
+Homepage = "https://github.com/jainiakhil/Bushfire_Early_Warning_System"
+Repository = "https://github.com/jainiakhil/Bushfire_Early_Warning_System"
+Issues = "https://github.com/jainiakhil/Bushfire_Early_Warning_System/issues"
+
+[tool.setuptools]
+# The project ships two import roots: the reusable library (`src`) and the
+# service layer (`app`). Both are packaged so `import src...` / `import app...`
+# resolve identically in dev, tests, Docker and CI.
+packages = ["src", "app"]
+
+[tool.setuptools.package-dir]
+"" = "."
+
+# ---------------------------------------------------------------------------
+# Ruff - linting + import sorting + a subset of docstring rules
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+extend-exclude = ["venv", "data", "mlruns", "notebooks"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "D"]
+ignore = [
+    "D203",   # 1 blank line before class docstring (conflicts with D211)
+    "D213",   # multi-line summary on second line (conflicts with D212)
+    "D107",   # __init__ documented in the class docstring instead
+    "E501",   # line length handled by the formatter, not enforced hard
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D"]          # tests document themselves through names/asserts
+"scripts/*" = ["D103"]     # thin CLI wrappers
+"__init__.py" = ["D104"]
+"app/api/endpoints.py" = ["B008"]   # FastAPI Depends/File/Query in defaults is the idiom
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+# ---------------------------------------------------------------------------
+# mypy - static type checking
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.13"
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+files = ["src", "app"]
+
+# ---------------------------------------------------------------------------
+# pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --cov=src --cov=app --cov-report=term-missing"
+filterwarnings = [
+    "ignore::DeprecationWarning:rasterio.*",
+    "ignore::DeprecationWarning:pyproj.*",
+    # affine nags to use `@` for matrix mul; rasterio internals still use `*`.
+    "ignore:Use `@` matmul instead of:PendingDeprecationWarning",
+    "ignore::PendingDeprecationWarning:affine",
+    "ignore:Using `httpx` with `starlette.testclient`:DeprecationWarning",
+]
+
+[tool.coverage.run]
+omit = ["*/dashboard/*", "src/data/download.py"]  # UI + network-only code, exercised manually

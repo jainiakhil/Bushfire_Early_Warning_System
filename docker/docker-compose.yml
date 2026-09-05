@@ -1,0 +1,50 @@
+# =============================================================================
+#  Local deployment: FastAPI inference service + Streamlit dashboard.
+#
+#  Run from the repo root:
+#      docker compose -f docker/docker-compose.yml up --build -d
+#
+#  The API expects an exported model at data/outputs/model.torchscript (train +
+#  export first: scripts/run_training.py). Both services see it through the
+#  bind-mounted ./data/outputs volume.
+# =============================================================================
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    image: sar-bushfire-api:latest
+    container_name: sar-bushfire-api
+    ports:
+      - "8000:8000"
+    environment:
+      LOG_LEVEL: INFO
+      SAR__TRAINING__DEVICE: cpu          # container has no GPU by default
+    volumes:
+      - ../configs:/app/configs:ro
+      - ../data/outputs:/app/data/outputs:ro
+    networks:
+      - sar-net
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dashboard
+    image: sar-bushfire-dashboard:latest
+    container_name: sar-bushfire-dashboard
+    ports:
+      - "8501:8501"
+    environment:
+      API_URL: http://api:8000
+      LOG_LEVEL: INFO
+    depends_on:
+      - api
+    networks:
+      - sar-net
+    restart: unless-stopped
+
+networks:
+  sar-net:
+    driver: bridge

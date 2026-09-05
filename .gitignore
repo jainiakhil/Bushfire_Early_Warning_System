@@ -1,0 +1,52 @@
+# --- Python ---
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+.ipynb_checkpoints/
+
+# --- MLflow / experiment tracking ---
+mlruns/
+mlartifacts/
+
+# --- Data & model artefacts (kept out of git; regenerate or download) ---
+data/raw/*
+data/processed/*
+data/outputs/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/outputs/.gitkeep
+*.tif
+*.tiff
+*.SAFE/
+*.zip
+*.nc
+*.h5
+*.pt
+*.pth
+*.onnx
+*.torchscript
+
+# --- Secrets / local env ---
+.env
+.env.*
+!.env.example
+
+# --- Editors / OS ---
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db

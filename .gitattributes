@@ -1,0 +1,10 @@
+# Normalise line endings: LF in the repo, checked out native on Windows.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.tif binary
+*.tiff binary
+*.docx binary
+*.pt binary
+*.torchscript binary

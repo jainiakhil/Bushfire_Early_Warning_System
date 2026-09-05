@@ -1,0 +1,25 @@
+# Docker build context = repo root (docker-compose sets context: ..).
+# Keep images small and builds reproducible.
+venv/
+.venv/
+__pycache__/
+*.pyc
+.git/
+.github/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+mlruns/
+mlartifacts/
+*.db
+data/raw/
+data/processed/
+data/outputs/checkpoints/
+docs/
+tests/
+notebooks/
+*.docx
+.env
+.env.*

@@ -1,0 +1,15 @@
+# =============================================================================
+#  CPU-only dependency set - used by CI and by Docker images built without a GPU.
+#
+#  Installs the CPU PyTorch wheels explicitly so no CUDA runtime is pulled in,
+#  then defers everything else to requirements.txt.
+#
+#  Usage:
+#      pip install -r requirements-cpu.txt
+# =============================================================================
+
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch>=2.2.0
+torchvision>=0.17.0
+
+-r requirements.txt

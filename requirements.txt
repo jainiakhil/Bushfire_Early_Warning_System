@@ -1,0 +1,62 @@
+# =============================================================================
+#  Sentinel-1 SAR Bushfire Detection Pipeline - Python dependencies
+# =============================================================================
+#
+#  PyTorch / torchvision
+#  ---------------------
+#  The pins below install the *default* (CPU or bundled-CUDA) wheels from PyPI.
+#  For an NVIDIA GPU build, install torch/torchvision FIRST from the CUDA wheel
+#  index that matches your locally installed CUDA toolkit, e.g.:
+#
+#      pip install torch>=2.2.0 torchvision>=0.17.0 \
+#          --index-url https://download.pytorch.org/whl/cu124
+#
+#  then run `pip install -r requirements.txt` for everything else.
+#  See README.md > Installation for the full matrix.
+# =============================================================================
+
+# --- Deep learning ---
+torch>=2.2.0
+torchvision>=0.17.0
+segmentation-models-pytorch>=0.3.3   # ResNet-34 U-Net encoder/decoder (not in original spec)
+torchmetrics>=1.3.0                   # IoU / PR-AUC metrics
+
+# --- Numerics ---
+numpy>=1.26.0
+scipy>=1.12.0
+
+# --- Geospatial ---
+rasterio>=1.3.9
+geopandas>=0.14.3
+shapely>=2.0.3
+
+# --- Classical ML / image processing ---
+scikit-learn>=1.4.0
+scikit-image>=0.22.0
+
+# --- API service ---
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+pydantic>=2.6.0
+pydantic-settings>=2.2.0             # typed config + env-var overrides (not in original spec)
+python-multipart>=0.0.9
+
+# --- Dashboard ---
+streamlit>=1.32.0
+folium>=0.16.0
+streamlit-folium>=0.18.0
+
+# --- Utilities ---
+requests>=2.31.0
+pyyaml>=6.0.1
+tqdm>=4.66.0                          # training progress bars (not in original spec)
+
+# --- Experiment tracking ---
+mlflow>=2.11.0
+
+# --- Testing / quality ---
+pytest>=8.0.0
+pytest-cov>=4.1.0                     # coverage plugin the spec's CI assumes (not in original spec)
+httpx>=0.27.0
+ruff>=0.3.0
+mypy>=1.9.0

@@ -1,0 +1,95 @@
+# =============================================================================
+#  Master configuration for the Sentinel-1 SAR Bushfire Detection Pipeline
+# -----------------------------------------------------------------------------
+#  Every value here is loaded into a typed pydantic model by `src/config.py`.
+#  Any field can be overridden at runtime with an environment variable using
+#  the pattern  SAR__<SECTION>__<KEY>  (double underscores), e.g.
+#
+#      SAR__TRAINING__EPOCHS=2  SAR__TRAINING__DEVICE=cpu  python scripts/run_training.py
+#
+#  Units are stated in comments. Do not remove keys without updating the model.
+# =============================================================================
+
+data:
+  raw_dir: "data/raw"              # Sentinel-1 SAFE / synthetic scene pairs land here
+  processed_dir: "data/processed"  # calibrated + speckle-filtered GeoTIFFs, feature stacks
+  output_dir: "data/outputs"       # checkpoints, exported models, GeoJSON detections
+  spatial_resolution: 10.0         # metres per pixel (Sentinel-1 IW GRDH nominal)
+  tile_size: 256                   # training / inference patch edge, pixels
+  tile_overlap: 32                 # patch overlap, pixels (blends tiled inference seams)
+
+  # Ingestion source: "synthetic" (no credentials, default) or "cdse" (real data).
+  source: "synthetic"
+
+  # Working CRS for metric operations (feature maths, tiling, area).
+  #   "auto-utm"  -> pick the UTM zone containing the AOI centroid
+  #   "EPSG:3857" -> Web Mercator (matches the original spec's Task 2.2)
+  #   "EPSG:32756" (etc.) -> a fixed projected CRS
+  crs_working: "auto-utm"
+  # CRS of the emitted GeoJSON. Douglas-Peucker tolerance below is in these units.
+  crs_output: "EPSG:4326"
+
+features:
+  # Channel order of the model input stack. `src/features/selection.py` can be
+  # used offline to justify this list; training/inference just consume it.
+  selected_bands:
+    - "sigma0_vv"     # co-event VV backscatter (dB) - surface roughness
+    - "sigma0_vh"     # co-event VH backscatter (dB) - volume scattering
+    - "delta_vv"      # VV(t1) - VV(t0) (dB) - temporal change
+    - "delta_vh"      # VH(t1) - VH(t0) (dB) - canopy destruction / moisture drop
+    - "pol_ratio"     # VH(t1) / (VV(t1) + eps) - bare ground vs vegetation
+    - "glcm_contrast" # GLCM contrast texture over a 7x7 window on VH
+  glcm_window: 7        # pixels
+  glcm_levels: 32       # grey levels for GLCM quantisation
+  refined_lee_window: 5 # pixels - speckle filter moving window
+  equivalent_looks: 4.0 # ENL for speckle-variance estimation (GRDH ~4.4)
+  mi_sample_pixels: 200000  # pixels sampled for mutual-information scoring
+  vif_threshold: 10.0       # multicollinearity ceiling
+
+training:
+  batch_size: 8            # lowered from spec's 16 for 6 GB VRAM; see grad_accum_steps
+  grad_accum_steps: 2      # effective batch = batch_size * grad_accum_steps = 16
+  num_workers: 4
+  learning_rate: 0.0003
+  epochs: 40
+  focal_alpha: 0.25
+  focal_gamma: 2.0
+  dice_weight: 1.0
+  spatial_block_size_km: 25.0
+  spatial_buffer_km: 5.0
+  n_folds: 5
+  early_stopping_patience: 8   # epochs without val-IoU improvement
+  device: "auto"               # "auto" | "cuda" | "cpu"
+  precision: "16-mixed"        # "16-mixed" (AMP, CUDA only) | "32"
+  seed: 42
+
+model:
+  arch: "unet"
+  encoder: "resnet34"
+  encoder_weights: "imagenet"  # "imagenet" | null (random init, used in CI)
+  in_channels: 6               # must equal len(features.selected_bands)
+  classes: 1                   # binary: active fire front vs background
+  bottleneck_dropout: 0.2      # spatial dropout p in the bottleneck
+
+mlflow:
+  # Local SQLite backend by default (the file store is deprecated in MLflow 3).
+  # Relative sqlite paths are anchored to the repo root. Swap for a tracking
+  # server ("http://mlflow-server:5000") or Postgres in production.
+  tracking_uri: "sqlite:///mlruns/mlflow.db"
+  experiment: "sar-bushfire"
+
+synthetic:
+  n_scenes: 8
+  image_size: 1024      # pixels per side of each synthetic scene
+  n_fires: 3            # elliptical fire regions per co-event scene
+  noise_looks: 4        # speckle severity (lower = noisier)
+  seed: 42
+
+api:
+  host: "0.0.0.0"
+  port: 8000
+  confidence_threshold: 0.65   # probability -> binary fire mask
+  simplify_tolerance: 0.0001   # Douglas-Peucker, in crs_output units (degrees)
+  min_polygon_area_ha: 0.5     # drop detections smaller than this
+  max_upload_mb: 200           # reject larger GeoTIFF uploads
+  drift_alpha: 0.01            # KS-test p-value threshold for a drift alert
