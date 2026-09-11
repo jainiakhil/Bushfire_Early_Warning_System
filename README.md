@@ -1,8 +1,8 @@
 # 🔥 Bushfire Early Warning System — Sentinel-1 SAR Active-Fire Detection
 
-An end-to-end, production-grade machine-learning and remote-sensing pipeline that
-detects **active fire fronts through cloud and smoke** using Sentinel-1
-Synthetic Aperture Radar (SAR) imagery.
+An end-to-end machine-learning and remote-sensing **pipeline and reference
+implementation** that detects **active fire fronts through cloud and smoke**
+using Sentinel-1 Synthetic Aperture Radar (SAR) imagery.
 
 SAR sees through smoke and cloud that blind optical/thermal sensors, so a
 radar-based detector complements MODIS/VIIRS thermal products during the worst of
@@ -23,8 +23,48 @@ dashboard, all containerised with Docker Compose and covered by GitHub Actions C
 
 ---
 
+## 🚧 Project status
+
+**This is a personal, actively-developed portfolio project, not a deployed
+production system.** It is best read as a demonstration of an end-to-end
+ML/geospatial engineering workflow — architecture, testing and CI discipline —
+rather than a fire-ready product.
+
+**Working today**
+
+- Full pipeline runs end-to-end offline on a **synthetic** Sentinel-1/FIRMS
+  stand-in: ingest → preprocess → feature engineering → spatial-CV training →
+  TorchScript export → FastAPI inference → Streamlit/Folium dashboard.
+- 32 unit tests (`pytest`), `ruff` lint and `mypy` type checks, all green in
+  [GitHub Actions CI](../../actions) on every push.
+- Both service images (API + dashboard) build and run via Docker Compose.
+- Real-data ingestion code (Copernicus CDSE + NASA FIRMS clients) is written
+  and config-switchable (`data.source: cdse`), but has **not yet been
+  exercised end-to-end against live credentials**.
+
+**Still in development**
+
+- The model has only ever been trained on **synthetic** data — it has **not
+  been trained or validated on a real Sentinel-1 scene or a real bushfire**.
+  Validation metrics on the synthetic set are weak (val IoU ≈ 0.46, val
+  PR-AUC ≈ 0.001), so detection quality is currently unproven, not just
+  unpolished.
+- No real-data validation notebook yet (tracked in [Roadmap](#roadmap)).
+- GLCM texture extraction is an unoptimised pixel-wise loop — slow on large
+  scenes.
+- No auth/rate-limiting on the API, and no Kubernetes/production deployment
+  manifests.
+
+If you're a reviewer skimming this: the parts worth looking at are the
+[architecture](#architecture), the spatial cross-validation and loss design in
+[How it works](#how-it-works-the-science), the test suite, and the CI/Docker
+setup — not the current model's accuracy.
+
+---
+
 ## Table of contents
 
+- [Project status](#-project-status)
 - [Architecture](#architecture)
 - [How it works (the science)](#how-it-works-the-science)
 - [Prerequisites](#prerequisites)
@@ -410,10 +450,14 @@ no GPU, no credentials.
 
 ## Roadmap
 
+- **Real-data validation** — run the CDSE/FIRMS ingestion path against a known
+  fire event (e.g. the 2019–20 SE-Australia bushfires) and retrain/evaluate on
+  real Sentinel-1 scenes instead of synthetic ones. This is the top priority;
+  everything below assumes it's done first.
 - Vectorised / numba GLCM contrast.
 - Multi-fold ensembling + calibrated probabilities.
-- Real-data validation notebook (2019–20 AU bushfires).
 - Time-series inference over Sentinel-1 revisit stacks.
+- API auth / rate-limiting.
 - Kubernetes manifests / Helm chart.
 
 ## Contributing & licence
