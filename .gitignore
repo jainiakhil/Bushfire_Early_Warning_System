@@ -44,6 +44,14 @@ data/outputs/*
 .env.*
 !.env.example
 
+# --- Planning / local notes (not part of the shipped project) ---
+Bushfire_EWS_Plan.docx
+*.docx
+*.doc
+NOTES.md
+TODO.md
+SCRATCH*
+
 # --- Editors / OS ---
 .idea/
 .vscode/
